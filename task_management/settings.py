@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'phonenumber_field',
     'accounts',
+    'tasks',
 ]
 
 MIDDLEWARE = [
@@ -98,7 +99,7 @@ DB_IS_AVAIL = all([
 if DB_IS_AVAIL and DB_IS_READY:
     DATABASES = {
         'default': {
-            'ENGINE': 'django_tenants.postgresql_backend',
+            'ENGINE': 'django.db.backends.postgresql',
             'NAME': DB_NAME,
             'USER': DB_USERNAME,
             'PASSWORD': DB_PASSWORD,
