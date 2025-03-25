@@ -49,8 +49,6 @@ class Task(models.Model):
     assignees = models.ManyToManyField(
         Profile,
         related_name='assigned_tasks', 
-        blank=True,
-        null=True
     )
     project = models.ForeignKey(
         Project, 
@@ -86,13 +84,6 @@ class Comment(models.Model):
         Profile,
         on_delete=models.CASCADE,
         related_name='comments',
-    )
-    parent = models.ForeignKey(
-        'self',
-        on_delete=models.CASCADE,
-        related_name='replies',
-        null=True,
-        blank=True
     )
     
     class Meta:
