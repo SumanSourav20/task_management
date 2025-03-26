@@ -31,4 +31,5 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('register/', RegisterView.as_view(), name='register'),
     path('accounts/', include('accounts.urls')),
+    path('api/',include('tasks.urls'))
 ] + debug_toolbar_urls()

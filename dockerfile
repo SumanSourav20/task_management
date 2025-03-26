@@ -6,7 +6,7 @@ RUN pip install --no-cache-dir pipenv
 
 COPY Pipfile* ./
 
-RUN pipenv install --dev
+RUN pipenv install
 
 COPY . .
 
