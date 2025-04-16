@@ -28,7 +28,7 @@ from django.db import transaction
 
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from .serializers import RegisterSerializer
+from accounts.serializers import RegisterSerializer
 from drf_spectacular.utils import extend_schema
 
 User = get_user_model()

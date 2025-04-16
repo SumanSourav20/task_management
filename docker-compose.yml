@@ -2,7 +2,7 @@ services:
 
   backend:
     build: .
-    command: pipenv run python manage.py runserver 0.0.0.0:8000
+    command: sh -c "chmod +x ./dev.sh && ./dev.sh"
     volumes:
       - .:/app
     ports:

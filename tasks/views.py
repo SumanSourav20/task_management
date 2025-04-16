@@ -3,41 +3,60 @@ from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import filters
 from django.shortcuts import get_object_or_404
+
+from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import FilterSet, DateFilter, ModelMultipleChoiceFilter
+from rest_framework.pagination import PageNumberPagination
 
 from .models import Project, Status, Task, Comment
 from .serializers import (
-    ProjectSerializer, ProjectDetailSerializer,
-    TaskSerializer, TaskDetailSerializer,
-    StatusSerializer, CommentSerializer,
-    ProfileSerializer,
-    TaskAssignSerializer
+    TaskSerializer, 
+    TaskDetailSerializer,
+    StatusSerializer, 
+    CommentSerializer,
 )
 from accounts.models import Profile
 
+from drf_spectacular.utils import extend_schema, OpenApiExample
 
-class ProjectViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
-    queryset = Project.objects.all()
-    
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return ProjectDetailSerializer
-        return ProjectSerializer
-    
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user.profile)
-    
-    @action(detail=True)
-    def tasks(self, request, pk=None):
-        project = self.get_object()
-        tasks = project.tasks.all()
-        serializer = TaskSerializer(tasks, many=True)
-        return Response(serializer.data)
+class SetPagination(PageNumberPagination):
+    page_size = 100
+    page_size_query_param = "page_size"
+    max_pages_size = 1000
 
+class TaskFilter(FilterSet):
+    due_date_min = DateFilter(field_name="due_date", lookup_expr="gte")
+    due_date_max = DateFilter(field_name="due_date", lookup_expr="lte")
+    created_date_min = DateFilter(field_name="created_at",lookup_expr="gte")
+    created_date_max = DateFilter(field_name="created_at",lookup_expr="lte")
+
+    assignees = ModelMultipleChoiceFilter(
+        field_name="assignees",
+        queryset=Profile.objects.all(),
+        conjoined=False
+    )
+    
+    assignees_all = ModelMultipleChoiceFilter(
+        field_name="assignees",
+        queryset=Profile.objects.all(),
+        conjoined=True
+    )
+
+    class Meta:
+        model = Task
+        fields = {
+            'status': ['exact'],
+            'priority': ['exact'],
+        }
 
 class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    filter_backends=[DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = TaskFilter
+    search_fields = ["title", "description"]
+    ordering_fields = ["due_date", "created_at"]
     
     def get_queryset(self):
         queryset = Task.objects.all()
@@ -56,57 +75,97 @@ class TaskViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return TaskDetailSerializer
         return TaskSerializer
+    
+    @extend_schema(
+        description="Assign users to a task",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'profile_ids': {
+                        'type': 'array',
+                        'items': {'type': 'integer'}
+                    }
+                },
+                'required': ['profile_ids']
+            }
+        },
+        responses={
+            200: TaskDetailSerializer,
+        },
+        examples=[
+            OpenApiExample(
+                name='Valid Assignment Request',
+                value={'profile_ids': [1, 2, 3]},
+                request_only=True,
+            ),
+        ]
+    )
         
-    @action(detail=False, methods=['get'])
-    def by_profile(self, request, project_pk=None):
-        profile_id = request.query_params.get('profile_id')
+    @action(detail=True, methods=['post'])
+    def assign(self, request, pk=None, project_pk=None):
+        task = self.get_object()
         
-        if not profile_id:
+        profile_ids = request.data.get('profile_ids', [])
+        
+        if not profile_ids:
             return Response(
-                {"detail": "Profile ID is required"},
+                {"detail": "Profile IDs are required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
-        queryset = self.get_queryset().filter(assignees__id=profile_id)
-        serializer = TaskSerializer(queryset, many=True)
-        return Response(serializer.data)
-    
-class TaskAssignView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk):
-        task = get_object_or_404(Task, pk=pk)
-        
-        serializer = TaskAssignSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        profile_ids = serializer.validated_data.get('profile_ids', [])
         
         profiles = Profile.objects.filter(id__in=profile_ids)
-        if not profiles.exists() and profile_ids:
+        if not profiles.exists():
             return Response(
-                {"detail": "No valid users provided"},
+                {"detail": "No valid profiles found with the provided IDs"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         task.assignees.add(*profiles)
-        detail_serializer = TaskDetailSerializer(task)
-        return Response(detail_serializer.data)
-
-
-class TaskUnassignView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk):
-        task = get_object_or_404(Task, pk=pk)
+        serializer = TaskDetailSerializer(task)
+        return Response(serializer.data)
+    
+    @extend_schema(
+        description="Unassign users from a task",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'profile_ids': {
+                        'type': 'array',
+                        'items': {'type': 'integer'}
+                    }
+                },
+                'required': ['profile_ids']
+            }
+        },
+        responses={
+            200: TaskDetailSerializer,
+        },
+        examples=[
+            OpenApiExample(
+                name='Valid Unassignment Request',
+                value={'profile_ids': [1, 2, 3]},
+                request_only=True,
+            ),
+        ]
+    )
+    @action(detail=True, methods=['post'])
+    def unassign(self, request, pk=None, project_pk=None):
+        task = self.get_object()
         
-        serializer = TaskAssignSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        profile_ids = serializer.validated_data.get('profile_ids', [])
+        profile_ids = request.data.get('profile_ids', [])
+        
+        if not profile_ids:
+            return Response(
+                {"detail": "Profile IDs are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         profiles = Profile.objects.filter(id__in=profile_ids)
         task.assignees.remove(*profiles)
-        detail_serializer = TaskDetailSerializer(task)
-        return Response(detail_serializer.data)
+        serializer = TaskDetailSerializer(task)
+        return Response(serializer.data)
 
 
 class StatusViewSet(viewsets.ModelViewSet):

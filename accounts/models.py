@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.contrib.auth import get_user_model
+from phonenumber_field.modelfields import PhoneNumberField
 
 User = get_user_model()
 
@@ -11,6 +12,7 @@ class Profile(models.Model):
         related_name='profile',
     )
     profile_pic = models.TextField(null=True, blank=True) # or avtar
+    phone_no = PhoneNumberField(null=True, blank=True)
     
     def get_full_name(self):
         return f"{self.user.first_name} {self.user.last_name}"

@@ -1,9 +1,9 @@
 from rest_framework import serializers
-from .models import Status, Task, Project, Comment
-from .validators import hex_color_validator
+from tasks.models import Status, Task, Project, Comment
+from tasks.validators import hex_color_validator
 from accounts.models import Profile
 
-class ProfileSerializer(serializers.ModelSerializer):
+class OthersProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Profile
@@ -28,7 +28,7 @@ class StatusSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
     
 class CommentSerializer(serializers.ModelSerializer):
-    created_by = ProfileSerializer(read_only=True)
+    created_by = OthersProfileSerializer(read_only=True)
     
     class Meta:
         model = Comment
@@ -37,7 +37,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class TaskSerializer(serializers.ModelSerializer):
     status_display = StatusSerializer(read_only=True)
-    assignees = ProfileSerializer(many=True,read_only=True)
+    assignees = OthersProfileSerializer(many=True,read_only=True)
     comments_count = serializers.SerializerMethodField()
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     
@@ -60,27 +60,6 @@ class TaskDetailSerializer(TaskSerializer):
     
     class Meta(TaskSerializer.Meta):
         fields = TaskSerializer.Meta.fields + ['comments', 'created_by', 'created_at',]
-
-class ProjectSerializer(serializers.ModelSerializer):
-    created_by = ProfileSerializer(read_only=True)
-    tasks_count = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = Project
-        fields = ['id', 'name', 'description', 'created_at', 'closed', 'created_by', 'tasks_count']
-        read_only_fields = ['created_at']
-
-    def get_tasks_count(self, obj):
-        return obj.tasks.count()
-
-class ProjectDetailSerializer(ProjectSerializer):
-    tasks = serializers.SerializerMethodField(read_only=True)
-    
-    class Meta(ProjectSerializer.Meta):
-        fields = ProjectSerializer.Meta.fields + ['tasks']
-    
-    def get_tasks(self, obj):
-        return TaskSerializer(obj.tasks.all(), many=True).data
 
 class TaskAssignSerializer(serializers.Serializer):
     profile_ids = serializers.ListField(

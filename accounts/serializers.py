@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from accounts.models import Profile
 from accounts.validators import strong_password_validator
+from phonenumber_field.serializerfields import PhoneNumberField
 from drf_spectacular.utils import extend_schema_field
 from drf_spectacular.types import OpenApiTypes
 
@@ -89,10 +90,11 @@ class UserSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     full_name = serializers.SerializerMethodField(read_only=True)
+    phone_no = PhoneNumberField()
 
     class Meta:
         model = Profile
-        fields = ['id', 'user', 'full_name', 'profile_pic',]
+        fields = ['id', 'user', 'full_name', 'profile_pic', 'phone_no']
 
     def get_full_name(self, obj):
         return obj.get_full_name()
