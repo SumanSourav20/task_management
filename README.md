@@ -11,7 +11,7 @@ docker-compose up --build
 Or in detached mode( use this -f docker-compose.yml file name)
 
 ```sh
-docker compose  -d
+docker compose up -d
 ```
 
 If not using Docker, use Python 3.13 and configure PostgreSQL correctly:
@@ -53,7 +53,7 @@ Upon successful registration, an activation link is sent via email.
 **GET** `/activate/<token>/`
 
 ### Request password reset
-**POST** `/password-reset/request/`
+**POST** `accounts/password-reset/request/`
 
 ```json
 {
@@ -61,12 +61,19 @@ Upon successful registration, an activation link is sent via email.
 }
 ```
 
+```json
+{
+    "status": "success",
+    "message": "OTP has been sent to your email.",
+    "token": "......."
+}```
+
 Upon request, a token is returned, and an OTP is sent via email.
 
 > **Issue:** This endpoint allows checking if an email is registered.
 
 ### Verify password reset
-**POST** `/password-reset/verify/`
+**POST** `accounts/password-reset/verify/`
 
 ```json
 {
@@ -85,11 +92,13 @@ Upon request, a token is returned, and an OTP is sent via email.
 
 > CORS is not implemented. Use Django Rest Framework browser client for authentication.
 
-### Login
-**POST** `/api-auth/login/`
-
-### Obtain access token
+### Obtain access token(login)
 **POST** `/api/token/`
+
+{
+    "refresh": "",
+    "access": ""
+}
 
 ### Refresh access token
 **POST** `/api/token/refresh/`

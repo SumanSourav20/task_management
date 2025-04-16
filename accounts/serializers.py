@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Profile
-from phonenumber_field.serializerfields import PhoneNumberField
-from .validators import strong_password_validator
+from accounts.models import Profile
+from accounts.validators import strong_password_validator
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.types import OpenApiTypes
 
 User = get_user_model()
 
@@ -91,7 +92,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['id', 'user', 'phone_no', 'full_name', 'bio', 'profile_pic',]
+        fields = ['id', 'user', 'full_name', 'profile_pic',]
 
     def get_full_name(self, obj):
         return obj.get_full_name()
@@ -121,5 +122,31 @@ class ProfileListSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ['id', 'full_name', 'profile_pic']
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_full_name(self, obj):
         return obj.get_full_name()
+
+class EmptySerializer(serializers.Serializer):
+    pass
+
+class ActivationResponseSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    message = serializers.CharField()
+
+class ErrorResponseSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    message = serializers.CharField(required=False)
+    error = serializers.CharField(required=False)
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+class PasswordResetResponseSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    message = serializers.CharField()
+    token = serializers.CharField()
+
+class PasswordResetVerifySerializer(serializers.Serializer):
+    token = serializers.CharField()
+    otp = serializers.CharField()
+    new_password = serializers.CharField(write_only=True)

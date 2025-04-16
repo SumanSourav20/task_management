@@ -16,6 +16,8 @@ psycopg2-binary = "*"
 python-dotenv = "*"
 cryptography = "*"
 drf-nested-routers = "*"
+drf-spectacular = "*"
+gunicorn = "*"
 
 [dev-packages]
 

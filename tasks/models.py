@@ -91,3 +91,6 @@ class Comment(models.Model):
     
     def __str__(self):
         return f"Comment by {self.created_by} on {self.task}"
+    
+class Wordspace(models.Model):
+    title = models.CharField(max_length=255)
